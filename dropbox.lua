@@ -1,6 +1,3 @@
--- Copyright Michael Weingarden 2013.  All rights reserved. 
--- Dropbox API code for Corona SDK
--- Credit goes to Corona SDK for the responseToTable function
 --main works well1 is last known good build
 
 --most of this was constructed based on the advice found here:
