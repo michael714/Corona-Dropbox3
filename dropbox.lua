@@ -1,3 +1,4 @@
+-- Copyright Michael Weingarden 2013.  All rights reserved.
 --main works well1 is last known good build
 
 --most of this was constructed based on the advice found here:
