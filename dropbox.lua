@@ -1,12 +1,11 @@
 -- Copyright Michael Weingarden 2013.  All rights reserved.
--- credit for ResponseToTable function goes to Corona SDK
---main works well1 is last known good build
+
+--main works well is last known good build
 
 --most of this was constructed based on the advice found here:
 	--https://www.dropbox.com/developers/blog/20
 
---//TODO: store access_token and access_secret in file so you don't have to keep authorizing
-			-- allow download or upload of binary files using /media
+--//TODO: allow download or upload of binary files using /media and /put_files
 
 
 local widget = require( "widget" )
@@ -21,6 +20,11 @@ access_token_secret = ""
 request_token = ""
 request_token_secret = ""
 accountInfo = ""
+_W = display.contentWidth
+_H = display.contentHeight
+
+local myText = display.newText(accountInfo, 0, 4*_H/7 - 100, 400, 600, native.systemFont, 16)
+myText:setTextColor(255, 255, 255)
 
 local function loadToken( type )
 
@@ -48,7 +52,7 @@ local function storeToken( type, data )
 
 end
 
-local function rawGetRequest(url, rawdata, callback) 
+local function rawGetRequest(url, rawdata) 
 	
 	-- Callback from network loader
 	local function rawGetListener( event )
@@ -59,17 +63,15 @@ local function rawGetRequest(url, rawdata, callback)
 			print( "Network error!", event.status, event.response)
 		else
 			print ( "rawGetListener RESPONSE: ", event.status,  event.response )	-- **debug
+		    myText.text = "Data received.  Press Display Info to view."
 		end
 
 		-- the event.response is the requested data from Dropbox
 		-- you can either process the response here or use a global variable or pass it to
 		-- another function
+		-- using accountInfo to either store account info or incoming text file
 		accountInfo = event.response
 
-		-- if callback then	
-		-- 	print("rawGetRequest calling back")
-		-- 	callback( event.isError, event.response)		-- return with response
-		-- end
 	end
 
 	print("rawdata "..rawdata)
@@ -269,12 +271,9 @@ local function connect( event )
 
 end
 
-local function acctInfo_ret( status, result )
-	print("acctInfo status: "..status)
-	print("acctInfo: "..result)
-end
 
-local function getInfo( event )
+
+local function getSomething( event )
 
 	print("pre get info request")
 	--Your HTTP request should have the following form:
@@ -285,24 +284,23 @@ local function getInfo( event )
 	--formatted for POST which doesn't seem to work for file requests
 	--local post_data =  "oauth_version=\"1.0\", oauth_signature_method=\""..mySigMethod.."\", oauth_consumer_key=\""..consumer_key.."\", oauth_token=\""..access_token.."\", oauth_signature=\""..consumer_secret.."&"..access_token_secret.."\""
 
-
-    --account_info_url = "https://api.dropbox.com/1/account/info"
-    account_info_url = "https://api-content.dropbox.com/1/files/dropbox/Public/2ndPeriod.csv"
+	--use this url if you just want account info
+    --local url = "https://api.dropbox.com/1/account/info"
+    --use this url if you want to download a plain text file
+    local url = "https://api-content.dropbox.com/1/files/dropbox/Public/2ndPeriod.csv"
    
 	print("post get info request")
 
-    local result1 = rawGetRequest(account_info_url, post_data, acctInfo_ret)
+    local result1 = rawGetRequest(url, post_data)
     print("rawGetRequest result: "..tostring(result1))
+
 
 end
 
 local function displayInfo()
 	print("accountInfo: "..accountInfo)
+	myText.text = accountInfo
 end
-
-
-_W = display.contentWidth
-_H = display.contentHeight
 
 access_token = loadToken( "access_token" )
 access_token_secret = loadToken( "access_token_secret")
@@ -311,7 +309,7 @@ if access_token == "" then
 	connectButton = widget.newButton
 	{
 		left = 380,
-		top = _H/5,
+		top = _H/7 - 100,
 		width = 200,
 		height = 50,
 		id = "button1",
@@ -327,7 +325,7 @@ end
 getInfoButton = widget.newButton
 {
 	left = 380,
-	top = 3*_H/5,
+	top = 2*_H/7 - 100,
 	width = 200,
 	height = 50,
 	id = "button3",
@@ -335,14 +333,14 @@ getInfoButton = widget.newButton
 	overFile = "smallButtonOver.png",
 	label = "Get Info",
 	fontSize = 34,
-	onRelease = getInfo
+	onRelease = getSomething
 }
 getInfoButton.x = display.contentWidth / 2
 
 displayInfoButton = widget.newButton
 {
 	left = 380,
-	top = 4*_H/5,
+	top = 3*_H/7 - 100,
 	width = 200,
 	height = 50,
 	id = "button3",
