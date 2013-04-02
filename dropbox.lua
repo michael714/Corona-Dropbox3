@@ -3,16 +3,16 @@
 --main works well is last known good build
 
 --most of this was constructed based on the advice found here:
-	--https://www.dropbox.com/developers/blog/20
-
---//TODO: allow download or upload of binary files using /media and /put_files
-
+	--https://www.dropbox.com/developers/blog/20   and here:
+	--https://www.dropbox.com/developers/core/api#request-token
 
 local widget = require( "widget" )
+local lfs = require "lfs"
 
 consumer_key = ""			-- key string goes here
 consumer_secret = ""		-- secret string goes here
 webURL = "http://www.google.com"
+myFile = "2ndPeriod.csv"
 
 mySigMethod = "PLAINTEXT"
 access_token = ""
@@ -23,11 +23,10 @@ accountInfo = ""
 _W = display.contentWidth
 _H = display.contentHeight
 
-local myText = display.newText(accountInfo, 0, 4*_H/7 - 100, 400, 600, native.systemFont, 16)
+local myText = display.newText(accountInfo, 0, 5*_H/8 - 100, 400, 600, native.systemFont, 16)
 myText:setTextColor(255, 255, 255)
 
 local function loadToken( type )
-
 	local saveData = ""
 	local path = system.pathForFile( type..".txt", system.DocumentsDirectory )
 	local file = io.open( path, "r" )
@@ -37,28 +36,20 @@ local function loadToken( type )
 		io.close( file )
 	end
 	file = nil
-
 	return saveData
 end
 
 local function storeToken( type, data )
-
 	local path = system.pathForFile( type..".txt", system.DocumentsDirectory )
 	local file = io.open( path, "w" )
 	file:write( data )
 	io.close( file )
-	--print("Stored textField.text: "..textField.text)
 	file = nil
-
 end
 
 local function rawGetRequest(url, rawdata) 
 	
-	-- Callback from network loader
-	local function rawGetListener( event )
-
-		print("rawGetListener")
-					
+	local function rawGetListener( event )		
 		if event.isError then
 			print( "Network error!", event.status, event.response)
 		else
@@ -74,35 +65,22 @@ local function rawGetRequest(url, rawdata)
 
 	end
 
-	print("rawdata "..rawdata)
-
 	url = url.."?"..rawdata
-
 	local result = network.request( url, "GET", rawGetListener)
-
 	return result
 end
 
 local function rawPostRequest(url, rawdata, callback)
- 	
-	print("rawPostRequest")
-
-	-- Callback from network loader
-	local function rawPostListener( event )
-					
-		print("rawPostListener")
-
+	local function rawPostListener( event )		
 		if event.isError then
 			print( "Network error!", event.status, event.response)
 		else
 			print ( "Dropbox RESPONSE: ", event.status,  event.response )	-- **debug
 		end
-
 		if callback then
 			print("calling back from rawPostRequest")	
 			callback( event.isError, event.response)		-- return with response
 		end
-		
 	end
 
 	local params = {}
@@ -111,42 +89,27 @@ local function rawPostRequest(url, rawdata, callback)
 	headers["Content-Type"] = "text/plain"
 	headers["Authorization"] = "OAuth "..rawdata
 	params.headers = headers
-	--params.body = rawdata
-	
-	print("rawPostRequest posting")
-
 	local result = network.request( url, "POST", rawPostListener, params)
-
-	print("rawPostRequest posting finished")
-
 	return result
 end
 
 
 local function getRequestToken( consumer_key, token_ready_url, request_token_url,
 	consumer_secret, callback )
- 
-	print("getRequestToken")
-
 	--Your HTTP request should have the following header:
 	--Authorization: OAuth oauth_version="1.0", oauth_signature_method="PLAINTEXT", oauth_consumer_key="<app-key>", oauth_signature="<app-secret>&"
    local post_data = "oauth_version=\"1.0\", oauth_signature_method=\""..mySigMethod.."\", oauth_consumer_key=\""
     ..consumer_key.."\", oauth_signature=\""..consumer_secret.."&\""
     return rawPostRequest(request_token_url, post_data, callback)
-
-
 end
 
 
 local function getAccessToken(token, token_secret, consumer_key, consumer_secret,
 	access_token_url, callback)
-
-	print("Getting access token")
     --Authorization: OAuth oauth_version="1.0", oauth_signature_method="PLAINTEXT", oauth_consumer_key="<app-key>", oauth_token="<request-token>", oauth_signature="<app-secret>&<request-token-secret>"
     local post_data =  "oauth_version=\"1.0\", oauth_signature_method=\""..mySigMethod.."\", oauth_consumer_key=\""..consumer_key.."\", oauth_token=\""..token.."\", oauth_signature=\""..consumer_secret.."&"..token_secret.."\"" 
-   
+  
     return rawPostRequest(access_token_url, post_data, callback)
-
 end
 
 local function responseToTable(str, delimiters)
@@ -261,14 +224,8 @@ end
 
 
 local function connect( event )
-	print("pre request token")
-
 	local dropbox_request = (getRequestToken(consumer_key, webURL,
 		"https://api.dropbox.com/1/oauth/request_token", consumer_secret, requestToken_ret))
-
-	print("post request token")
-
-
 end
 
 
@@ -287,7 +244,7 @@ local function getSomething( event )
 	--use this url if you just want account info
     --local url = "https://api.dropbox.com/1/account/info"
     --use this url if you want to download a plain text file
-    local url = "https://api-content.dropbox.com/1/files/dropbox/Public/2ndPeriod.csv"
+    local url = "https://api-content.dropbox.com/1/files/dropbox/Public/"..myFile
    
 	print("post get info request")
 
@@ -300,16 +257,62 @@ end
 local function displayInfo()
 	print("accountInfo: "..accountInfo)
 	myText.text = accountInfo
+	local path = system.pathForFile( myFile, system.DocumentsDirectory )
+	local file = io.open( path, "w" )
+	file:write( accountInfo )
+	io.close( file )
+	file = nil
+end
+
+local function putFileListener( event )
+	print("putFileListener")
+	if event.isError then
+		print( "Network error!", event.status, event.response)
+	else
+		print ( "Dropbox RESPONSE: ", event.status,  event.response )	-- **debug
+	end
+end
+
+local function putFile()
+
+	--formatted for POST which doesn't seem to work for file requests
+	local post_headers =  "oauth_version=\"1.0\", oauth_signature_method=\""..mySigMethod.."\", oauth_consumer_key=\""..consumer_key.."\", oauth_token=\""..access_token.."\", oauth_signature=\""..consumer_secret.."&"..access_token_secret.."\""
+
+	--Note: Providing a Content-Length header set to the size of the uploaded file is required so that the server can verify that it has received the entire file contents.
+	local path = system.pathForFile( myFile, system.DocumentsDirectory )
+	local filesize = lfs.attributes (path, "size")
+
+    --use this url if you want to upload a file file
+    local url = "https://api-content.dropbox.com/1/files_put/dropbox/Public/testFromapp.txt"
+
+	local params = {}
+	local headers = {}
+	headers["Content-Type"] = "text/plain"
+	headers["Content-Length"] = fileSize
+	headers["Authorization"] = "OAuth "..post_headers
+	params.headers = headers
+	-- This tells network.request() to get the request body from a file...
+	params.body = {
+	        filename = myFile,
+	        baseDirectory = system.DocumentsDirectory        
+	        }
+	
+	print("rawPostRequest posting")
+
+	local result = network.request( url, "POST", putFileListener, params)
+
 end
 
 access_token = loadToken( "access_token" )
 access_token_secret = loadToken( "access_token_secret")
 
+-- there is no need to show the Connect button if the user has already
+--		authorized Dropbox access previously
 if access_token == "" then
 	connectButton = widget.newButton
 	{
 		left = 380,
-		top = _H/7 - 100,
+		top = _H/8 - 100,
 		width = 200,
 		height = 50,
 		id = "button1",
@@ -325,7 +328,7 @@ end
 getInfoButton = widget.newButton
 {
 	left = 380,
-	top = 2*_H/7 - 100,
+	top = 2*_H/8 - 100,
 	width = 200,
 	height = 50,
 	id = "button3",
@@ -340,7 +343,7 @@ getInfoButton.x = display.contentWidth / 2
 displayInfoButton = widget.newButton
 {
 	left = 380,
-	top = 3*_H/7 - 100,
+	top = 3*_H/8 - 100,
 	width = 200,
 	height = 50,
 	id = "button3",
@@ -351,3 +354,18 @@ displayInfoButton = widget.newButton
 	onRelease = displayInfo
 }
 displayInfoButton.x = display.contentWidth / 2
+
+putBtn = widget.newButton
+{
+	left = 380,
+	top = 4*_H/8 - 100,
+	width = 200,
+	height = 50,
+	id = "button4",
+	defaultFile = "smallButton.png",
+	overFile = "smallButtonOver.png",
+	label = "Put File",
+	fontSize = 34,
+	onRelease = putFile
+}
+putBtn.x = display.contentWidth / 2
