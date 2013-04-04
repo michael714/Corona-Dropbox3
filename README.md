@@ -18,7 +18,8 @@ adb logcat Corona:V *:S
 
 Let me know if you have questions.
 
-For those of you that have been waiting for Corona SDK Dropbox capability, I can save you dozens of hours of time
-(that's what I've put in!).  
+For those of you that have been waiting for Corona SDK Dropbox capability, 
+I can save you dozens of hours of time (that's what I've put in!).  
+
 Please consider making a donation if you find that this to be useful:
 <a href='http://www.pledgie.com/campaigns/18967'><img alt='Click here to lend your support to: Corona SDK Dropbox Sample Code and make a donation at www.pledgie.com !' src='http://www.pledgie.com/campaigns/18967.png?skin_name=chrome' border='0' /></a>
